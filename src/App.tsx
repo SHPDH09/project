@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { Upload, FileText, BarChart3, TrendingUp, Download, CheckCircle, ArrowLeft, Eye } from 'lucide-react';
+import { Upload, FileText, BarChart3, TrendingUp, Download, CheckCircle, ArrowLeft, Eye, Database, Wifi, Plus } from 'lucide-react';
 import FileUpload from './components/FileUpload';
+import DataImportModal from './components/DataImportModal';
+import ExportOptionsComponent from './components/ExportOptions';
 import ProcessingSteps from './components/ProcessingSteps';
 import DataOverview from './components/DataOverview';
 import DataCleaning from './components/DataCleaning';
@@ -9,8 +11,9 @@ import ModelAnalysis from './components/ModelAnalysis';
 import { ReportGeneration } from './components/ReportGeneration';
 import VisualDashboard from './components/VisualDashboard';
 import Footer from './components/Footer';
-import { processCSVData, cleanData, generateEDAInsights, simulateModelPerformance } from './utils/dataAnalysis';
-import type { DataSet, AnalysisResults } from './types/data';
+import { processFileData, performAdvancedCleaning, generateAdvancedEDAInsights, connectToDatabase, setupRealTimeUpdates } from './utils/advancedDataAnalysis';
+import { simulateModelPerformance } from './utils/dataAnalysis';
+import type { DataSet, AnalysisResults, DatabaseConnection, RealTimeConfig } from './types/data';
 
 function App() {
   const [currentStep, setCurrentStep] = useState<number>(0);
@@ -21,6 +24,10 @@ function App() {
   const [processingStepName, setProcessingStepName] = useState<string>('');
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [showVisualDashboard, setShowVisualDashboard] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [isRealTimeEnabled, setIsRealTimeEnabled] = useState(false);
+  const [realTimeInterval, setRealTimeInterval] = useState<NodeJS.Timeout | null>(null);
+  const [dataSource, setDataSource] = useState<'file' | 'database'>('file');
 
   const goToStep = (stepIndex: number) => {
     if (!isProcessing && (completedSteps.includes(stepIndex) || stepIndex <= Math.max(...completedSteps, currentStep))) {
@@ -30,37 +37,137 @@ function App() {
 
   const handleFileUpload = useCallback(async (file: File) => {
     setIsProcessing(true);
-    setProcessingStepName('Uploading and validating CSV file...');
+    setProcessingStepName('Processing file with advanced algorithms...');
+    setDataSource('file');
+    
     try {
-      // Process the uploaded CSV file
-      const processedData = await processCSVData(file);
+      // Process the uploaded file (CSV or Excel)
+      const processedData = await processFileData(file);
       setDataset(processedData);
       setCurrentStep(1);
       setCompletedSteps([0]);
       
-      // Automatically proceed with data cleaning
-      setProcessingStepName('Cleaning data and handling missing values...');
+      // Automatically proceed with advanced data cleaning
+      setProcessingStepName('Applying advanced data preprocessing pipeline...');
       setTimeout(async () => {
-        const cleaned = cleanData(processedData.data);
-        setCleanedData(cleaned);
+        const cleaningResults = performAdvancedCleaning(processedData.data, processedData.columns, processedData.types);
+        setCleanedData(cleaningResults.data);
         setCurrentStep(2);
         setCompletedSteps([0, 1]);
         
-        // Generate EDA insights
-        setProcessingStepName('Generating exploratory data analysis...');
+        // Generate advanced EDA insights
+        setProcessingStepName('Generating comprehensive statistical analysis...');
         setTimeout(async () => {
-          const insights = generateEDAInsights(cleaned, processedData.columns);
-          const modelResults = simulateModelPerformance(cleaned);
+          const insights = generateAdvancedEDAInsights(cleaningResults.data, processedData.columns, processedData.types);
+          const modelResults = simulateModelPerformance(cleaningResults.data);
           
           setAnalysisResults({
             insights,
             modelResults,
             summary: {
-              totalRows: cleaned.length,
+              totalRows: cleaningResults.data.length,
               totalColumns: processedData.columns.length,
               missingValues: processedData.summary.missingValues,
               duplicates: processedData.summary.duplicates,
-              outliers: processedData.summary.outliers
+              outliers: processedData.summary.outliers,
+              dataQualityScore: processedData.summary.dataQualityScore
+            },
+            preprocessing: {
+              steps: ['missing_value_imputation', 'duplicate_removal', 'outlier_handling', 'type_conversion'],
+              transformations: cleaningResults.transformations,
+              scalingMethod: cleaningResults.scalingMethod,
+              encodingMethod: cleaningResults.encodingMethod
+            }
+          });
+          setCurrentStep(3);
+          setCompletedSteps([0, 1, 2, 3]);
+          setProcessingStepName('');
+          setIsProcessing(false);
+        }, 2500);
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error processing file:', error);
+      setProcessingStepName('');
+      setIsProcessing(false);
+      alert(`Error processing file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }, []);
+
+  const handleDatabaseConnect = useCallback(async (connection: DatabaseConnection, realTimeConfig: RealTimeConfig) => {
+    setIsProcessing(true);
+    setProcessingStepName('Connecting to database...');
+    setDataSource('database');
+    
+    try {
+      const processedData = await connectToDatabase(connection, realTimeConfig);
+      setDataset(processedData);
+      setCurrentStep(1);
+      setCompletedSteps([0]);
+      
+      // Setup real-time updates if enabled
+      if (realTimeConfig.enabled) {
+        setIsRealTimeEnabled(true);
+        const interval = setupRealTimeUpdates(connection, realTimeConfig, (updatedData) => {
+          setDataset(updatedData);
+          // Re-run analysis pipeline
+          const cleaningResults = performAdvancedCleaning(updatedData.data, updatedData.columns, updatedData.types);
+          setCleanedData(cleaningResults.data);
+          
+          const insights = generateAdvancedEDAInsights(cleaningResults.data, updatedData.columns, updatedData.types);
+          const modelResults = simulateModelPerformance(cleaningResults.data);
+          
+          setAnalysisResults({
+            insights,
+            modelResults,
+            summary: {
+              totalRows: cleaningResults.data.length,
+              totalColumns: updatedData.columns.length,
+              missingValues: updatedData.summary.missingValues,
+              duplicates: updatedData.summary.duplicates,
+              outliers: updatedData.summary.outliers,
+              dataQualityScore: updatedData.summary.dataQualityScore
+            },
+            preprocessing: {
+              steps: ['missing_value_imputation', 'duplicate_removal', 'outlier_handling', 'type_conversion'],
+              transformations: cleaningResults.transformations,
+              scalingMethod: cleaningResults.scalingMethod,
+              encodingMethod: cleaningResults.encodingMethod
+            }
+          });
+        });
+        setRealTimeInterval(interval);
+      }
+      
+      // Continue with processing
+      setProcessingStepName('Processing database data...');
+      setTimeout(async () => {
+        const cleaningResults = performAdvancedCleaning(processedData.data, processedData.columns, processedData.types);
+        setCleanedData(cleaningResults.data);
+        setCurrentStep(2);
+        setCompletedSteps([0, 1]);
+        
+        setProcessingStepName('Generating advanced analytics...');
+        setTimeout(async () => {
+          const insights = generateAdvancedEDAInsights(cleaningResults.data, processedData.columns, processedData.types);
+          const modelResults = simulateModelPerformance(cleaningResults.data);
+          
+          setAnalysisResults({
+            insights,
+            modelResults,
+            summary: {
+              totalRows: cleaningResults.data.length,
+              totalColumns: processedData.columns.length,
+              missingValues: processedData.summary.missingValues,
+              duplicates: processedData.summary.duplicates,
+              outliers: processedData.summary.outliers,
+              dataQualityScore: processedData.summary.dataQualityScore
+            },
+            preprocessing: {
+              steps: ['missing_value_imputation', 'duplicate_removal', 'outlier_handling', 'type_conversion'],
+              transformations: cleaningResults.transformations,
+              scalingMethod: cleaningResults.scalingMethod,
+              encodingMethod: cleaningResults.encodingMethod
             }
           });
           setCurrentStep(3);
@@ -71,10 +178,24 @@ function App() {
       }, 1500);
       
     } catch (error) {
-      console.error('Error processing file:', error);
+      console.error('Error connecting to database:', error);
+      setProcessingStepName('');
       setIsProcessing(false);
+      alert(`Database connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }, []);
+
+  const handleExport = (format: string) => {
+    console.log(`Exported as ${format}`);
+  };
+
+  const stopRealTimeUpdates = () => {
+    if (realTimeInterval) {
+      clearInterval(realTimeInterval);
+      setRealTimeInterval(null);
+      setIsRealTimeEnabled(false);
+    }
+  };
 
   const steps = [
     { icon: Upload, title: 'Upload Data', description: 'Upload your CSV file' },
@@ -102,6 +223,22 @@ function App() {
               </div>
             </div>
             <div className="hidden md:flex items-center space-x-4">
+              {/* Real-time indicator */}
+              {isRealTimeEnabled && (
+                <div className="flex items-center space-x-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                  <Wifi className="w-4 h-4" />
+                  <span>Live Data</span>
+                </div>
+              )}
+              
+              {/* Data source indicator */}
+              <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm ${
+                dataSource === 'database' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+              }`}>
+                {dataSource === 'database' ? <Database className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                <span>{dataSource === 'database' ? 'Database' : 'File'}</span>
+              </div>
+              
               {steps.map((step, index) => {
                 const Icon = step.icon;
                 const isCompleted = completedSteps.includes(index);
@@ -148,12 +285,26 @@ function App() {
           <div className="space-y-8">
             <div className="text-center">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                Upload Your Dataset
+                Import Your Data
               </h2>
               <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-                Get comprehensive automated analysis including data cleaning, exploratory data analysis, 
-                feature engineering, and ML model recommendations - all in one click.
+                Advanced AI-powered analysis with real-time database connectivity and comprehensive 
+                machine learning pipeline. Choose your data source to begin.
               </p>
+              
+              {/* Import Options */}
+              <div className="flex justify-center space-x-6 mb-8">
+                <button
+                  onClick={() => setShowImportModal(true)}
+                  className="flex items-center space-x-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-medium transition-all duration-200 transform hover:scale-105"
+                >
+                  <Plus className="w-6 h-6" />
+                  <div className="text-left">
+                    <p className="font-semibold">Import Data</p>
+                    <p className="text-sm opacity-90">File or Database</p>
+                  </div>
+                </button>
+              </div>
             </div>
             <FileUpload onFileUpload={handleFileUpload} isProcessing={isProcessing} />
           </div>
@@ -221,12 +372,24 @@ function App() {
             </div>
             
             <ModelAnalysis results={analysisResults} />
-            <ReportGeneration 
+            
+            {/* Export Options */}
+            <ExportOptionsComponent
               dataset={dataset!}
               cleanedData={cleanedData}
               results={analysisResults}
-              onComplete={() => setCurrentStep(4)}
+              onExport={handleExport}
             />
+            
+            <div className="text-center">
+              <button
+                onClick={() => setCurrentStep(4)}
+                className="inline-flex items-center px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-105"
+              >
+                <CheckCircle className="w-5 h-5 mr-2" />
+                Complete Analysis
+              </button>
+            </div>
           </div>
         )}
 
@@ -243,11 +406,13 @@ function App() {
               </p>
               <button
                 onClick={() => {
+                  stopRealTimeUpdates();
                   setCurrentStep(0);
                   setDataset(null);
                   setCleanedData([]);
                   setAnalysisResults(null);
                   setCompletedSteps([]);
+                  setDataSource('file');
                 }}
                 className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
               >
@@ -269,6 +434,15 @@ function App() {
         />
       )}
       
+      {/* Data Import Modal */}
+      <DataImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onFileUpload={handleFileUpload}
+        onDatabaseConnect={handleDatabaseConnect}
+        isProcessing={isProcessing}
+      />
+      
       <Footer />
 
       {/* Processing Overlay */}
@@ -280,12 +454,12 @@ function App() {
               AI Analysis in Progress
             </h3>
             <p className="text-gray-600">
-              {processingStepName || 'Running automated analysis pipeline...'}
+              {processingStepName || 'Running advanced AI analysis pipeline...'}
             </p>
             <div className="mt-4 bg-blue-50 rounded-lg p-3">
               <div className="flex items-center justify-center space-x-2 text-blue-700">
                 <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium">AI-Powered Analysis</span>
+                <span className="text-sm font-medium">Advanced AI Processing</span>
               </div>
             </div>
           </div>

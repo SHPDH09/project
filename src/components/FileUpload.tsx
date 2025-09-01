@@ -41,13 +41,16 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, isProcessing }) =
   }, []);
 
   const validateAndUpload = (file: File) => {
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      setError('Please upload a CSV file');
+    const validExtensions = ['.csv', '.xlsx', '.xls'];
+    const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+    
+    if (!validExtensions.includes(fileExtension)) {
+      setError('Please upload a CSV or Excel file (.csv, .xlsx, .xls)');
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
-      setError('File size must be less than 10MB');
+    if (file.size > 50 * 1024 * 1024) { // 50MB limit
+      setError('File size must be less than 50MB');
       return;
     }
 
@@ -69,7 +72,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, isProcessing }) =
       >
         <input
           type="file"
-          accept=".csv"
+          accept=".csv,.xlsx,.xls"
           onChange={handleFileInput}
           disabled={isProcessing}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -87,10 +90,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, isProcessing }) =
               Upload your CSV dataset
             </h3>
             <p className="text-gray-600 mb-4">
-              Drag and drop your CSV file here, or click to browse
+              Drag and drop your file here, or click to browse
             </p>
             <p className="text-sm text-gray-500">
-              Maximum file size: 10MB • Supported format: .csv
+              Maximum file size: 50MB • Supported formats: CSV, Excel (.xlsx, .xls)
             </p>
           </div>
 
@@ -115,10 +118,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, isProcessing }) =
       {/* Features Preview */}
       <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { title: 'Data Cleaning', desc: 'Automatic handling of missing values, duplicates, and outliers' },
-          { title: 'EDA Insights', desc: 'Statistical summaries, correlations, and distribution analysis' },
-          { title: 'Visualizations', desc: 'Interactive charts, heatmaps, and comprehensive dashboards' },
-          { title: 'ML Models', desc: 'Automated model testing and performance comparison' }
+          { title: 'Advanced Preprocessing', desc: 'AI-powered data cleaning with multiple imputation methods' },
+          { title: 'Statistical Analysis', desc: 'Comprehensive EDA with skewness, kurtosis, and entropy analysis' },
+          { title: 'Interactive Visualizations', desc: 'Advanced charts with correlation matrices and anomaly detection' },
+          { title: 'ML Pipeline', desc: 'Automated feature engineering and model optimization' }
         ].map((feature, index) => (
           <div key={index} className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-gray-200/50">
             <h4 className="font-semibold text-gray-900 mb-2">{feature.title}</h4>

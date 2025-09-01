@@ -1,6 +1,8 @@
 import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 import type { DataSet, StatisticalSummary, EDAInsights, ModelResult } from '../types/data';
 
+// Legacy function for backward compatibility
 export const processCSVData = async (file: File): Promise<DataSet> => {
   return new Promise((resolve, reject) => {
     Papa.parse(file, {
@@ -51,7 +53,15 @@ export const processCSVData = async (file: File): Promise<DataSet> => {
               totalColumns: columns.length,
               missingValues,
               duplicates,
-              outliers
+              outliers,
+              dataQualityScore: 85,
+              memoryUsage: 0
+            },
+            metadata: {
+              fileName: file.name,
+              fileSize: file.size,
+              uploadTime: new Date(),
+              source: 'file'
             }
           };
 
