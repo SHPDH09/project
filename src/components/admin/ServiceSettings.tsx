@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Toggle, Save, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
+import { Settings, ToggleLeft as Toggle, Save, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { ServiceSettings as ServiceSettingsType } from '../../types/auth';
 
