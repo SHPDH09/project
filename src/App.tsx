@@ -1,5 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import { Upload, FileText, BarChart3, TrendingUp, Download, CheckCircle, ArrowLeft, Eye, Database, Wifi, Plus } from 'lucide-react';
+import { Upload, FileText, BarChart3, TrendingUp, Download, CheckCircle, ArrowLeft, Eye, Database, Wifi, Plus, LogOut, User, Crown, Clock } from 'lucide-react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import LoginPage from './components/auth/LoginPage';
+import RegisterPage from './components/auth/RegisterPage';
+import ForgotPasswordPage from './components/auth/ForgotPasswordPage';
+import AdminDashboard from './components/admin/AdminDashboard';
+import TrialExpiredModal from './components/TrialExpiredModal';
 import FileUpload from './components/FileUpload';
 import DataImportModal from './components/DataImportModal';
 import ExportOptionsComponent from './components/ExportOptions';
@@ -15,7 +21,10 @@ import { processFileData, performAdvancedCleaning, generateAdvancedEDAInsights, 
 import { simulateModelPerformance } from './utils/dataAnalysis';
 import type { DataSet, AnalysisResults, DatabaseConnection, RealTimeConfig } from './types/data';
 
-function App() {
+const AppContent: React.FC = () => {
+  const { user, isAuthenticated, isLoading, logout, checkTrialStatus } = useAuth();
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot'>('login');
+  const [showTrialExpired, setShowTrialExpired] = useState(false);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [dataset, setDataset] = useState<DataSet | null>(null);
   const [cleanedData, setCleanedData] = useState<any[]>([]);
@@ -28,6 +37,72 @@ function App() {
   const [isRealTimeEnabled, setIsRealTimeEnabled] = useState(false);
   const [realTimeInterval, setRealTimeInterval] = useState<NodeJS.Timeout | null>(null);
   const [dataSource, setDataSource] = useState<'file' | 'database'>('file');
+
+  // Check trial status on component mount
+  React.useEffect(() => {
+    if (user && user.subscription_status === 'expired') {
+      setShowTrialExpired(true);
+    }
+  }, [user]);
+
+  // Show loading screen
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show authentication pages if not authenticated
+  if (!isAuthenticated) {
+    switch (authMode) {
+      case 'register':
+        return <RegisterPage onSwitchToLogin={() => setAuthMode('login')} />;
+      case 'forgot':
+        return <ForgotPasswordPage onSwitchToLogin={() => setAuthMode('login')} />;
+      default:
+        return (
+          <LoginPage 
+            onSwitchToRegister={() => setAuthMode('register')}
+            onSwitchToForgotPassword={() => setAuthMode('forgot')}
+          />
+        );
+    }
+  }
+
+  // Show admin dashboard for admin users
+  if (user?.role === 'admin') {
+    return <AdminDashboard />;
+  }
+
+  // Check if trial expired
+  if (user?.subscription_status === 'expired' && !user?.is_active) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Clock className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Trial Expired</h1>
+          <p className="text-gray-600 mb-6">Your 3-day free trial has ended. Please contact us to upgrade to premium.</p>
+          <div className="bg-white rounded-xl p-6 border border-gray-200 mb-6">
+            <p className="text-sm text-gray-700 mb-2">Contact for Premium Upgrade:</p>
+            <p className="font-medium text-blue-600">rk331159@gmail.com</p>
+          </div>
+          <button
+            onClick={logout}
+            className="w-full py-3 px-4 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors duration-200"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const goToStep = (stepIndex: number) => {
     if (!isProcessing && (completedSteps.includes(stepIndex) || stepIndex <= Math.max(...completedSteps, currentStep))) {
@@ -222,7 +297,38 @@ function App() {
                 <p className="text-sm text-gray-600">Automated Machine Learning Pipeline</p>
               </div>
             </div>
-            <div className="hidden md:flex items-center space-x-4">
+            <div className="flex items-center space-x-4">
+              {/* User Info */}
+              <div className="hidden md:flex items-center space-x-3">
+                {user?.subscription_status === 'trial' && (
+                  <div className="flex items-center space-x-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                    <Clock className="w-4 h-4" />
+                    <span>Trial User</span>
+                  </div>
+                )}
+                
+                {user?.subscription_status === 'premium' && (
+                  <div className="flex items-center space-x-2 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
+                    <Crown className="w-4 h-4" />
+                    <span>Premium</span>
+                  </div>
+                )}
+                
+                <div className="text-right">
+                  <p className="text-sm font-medium text-gray-900">{user?.full_name}</p>
+                  <p className="text-xs text-gray-500">{user?.email}</p>
+                </div>
+              </div>
+              
+              {/* Logout Button */}
+              <button
+                onClick={logout}
+                className="flex items-center space-x-2 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors duration-200"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </button>
+              
               {/* Real-time indicator */}
               {isRealTimeEnabled && (
                 <div className="flex items-center space-x-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
@@ -232,14 +338,16 @@ function App() {
               )}
               
               {/* Data source indicator */}
-              <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm ${
+              <div className={`hidden md:flex items-center space-x-2 px-3 py-1 rounded-full text-sm ${
                 dataSource === 'database' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
               }`}>
                 {dataSource === 'database' ? <Database className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
                 <span>{dataSource === 'database' ? 'Database' : 'File'}</span>
               </div>
               
-              {steps.map((step, index) => {
+              {/* Progress Steps */}
+              <div className="hidden lg:flex items-center space-x-2">
+                {steps.map((step, index) => {
                 const Icon = step.icon;
                 const isCompleted = completedSteps.includes(index);
                 const isCurrent = index === currentStep;
@@ -258,7 +366,7 @@ function App() {
                     } ${isClickable ? 'hover:scale-110 cursor-pointer' : 'cursor-default'}`}>
                       {isCompleted ? <CheckCircle className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
                     </button>
-                    <span className={`text-xs font-medium hidden lg:block ${
+                    <span className={`text-xs font-medium hidden xl:block ${
                       isCompleted || isCurrent || isClickable ? 'text-gray-900' : 'text-gray-500'
                     }`}>
                       {step.title}
@@ -273,6 +381,7 @@ function App() {
                   </div>
                 );
               })}
+              </div>
             </div>
           </div>
         </div>
@@ -445,6 +554,17 @@ function App() {
       
       <Footer />
 
+      {/* Trial Expired Modal */}
+      <TrialExpiredModal
+        isOpen={showTrialExpired}
+        onClose={() => setShowTrialExpired(false)}
+        onUpgrade={() => {
+          setShowTrialExpired(false);
+          // Handle upgrade logic
+        }}
+        userEmail={user?.email || ''}
+      />
+
       {/* Processing Overlay */}
       {isProcessing && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -466,6 +586,14 @@ function App() {
         </div>
       )}
     </div>
+  );
+};
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
