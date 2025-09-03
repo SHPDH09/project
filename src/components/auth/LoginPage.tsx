@@ -160,8 +160,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister, onSwitchToFor
         <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <h3 className="font-medium text-yellow-800 mb-2">Demo Credentials</h3>
           <div className="text-sm text-yellow-700 space-y-1">
-            <p><strong>Admin:</strong> admin@dataanalyzer.com / admin123</p>
-            <p><strong>User:</strong> Register for a new account to get 3-day free trial</p>
+            <p><strong>Demo Admin:</strong> admin@dataanalyzer.com / admin123</p>
+            <p><strong>New Users:</strong> Register for a new account to get 3-day free trial</p>
+            <p className="text-xs mt-2 text-yellow-600">
+              Note: If admin login fails, please register a new account first, then contact support to upgrade to admin.
+            </p>
           </div>
         </div>
       </div>

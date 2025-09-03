@@ -56,6 +56,11 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
     setIsSubmitting(true);
     
     try {
+      // Validate password strength
+      if (formData.password.length < 6) {
+        throw new Error('Password must be at least 6 characters long');
+      }
+
       await register({
         email: formData.email,
         password: formData.password,
