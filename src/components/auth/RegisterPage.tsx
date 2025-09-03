@@ -304,13 +304,13 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
             <button
               type="submit"
               disabled={isSubmitting || isLoading}
-              className="w-full flex items-center justify-center space-x-2 py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-105 disabled:transform-none"
+              className="w-full flex items-center justify-center space-x-2 py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-105 disabled:transform-none"
             >
               {isSubmitting || isLoading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <span>Start Free Trial</span>
+                  <span>Create Account</span>
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
@@ -334,7 +334,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
         {/* Terms */}
         <div className="mt-6 text-center text-xs text-gray-500">
           By creating an account, you agree to our Terms of Service and Privacy Policy.
-          Your 3-day free trial starts immediately upon registration.
+          Your 3-day free trial starts after email confirmation.
         </div>
       </div>
     </div>

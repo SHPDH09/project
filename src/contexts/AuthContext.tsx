@@ -135,63 +135,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
 
-      // Special handling for demo admin user
-      if (credentials.email === 'admin@dataanalyzer.com' && credentials.password === 'admin123') {
-        // Check if admin user exists in our users table
-        const { data: existingUser, error: userCheckError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', credentials.email)
-          .single();
-
-        if (userCheckError && userCheckError.code === 'PGRST116') {
-          // User doesn't exist, create admin user
-          const adminId = crypto.randomUUID();
-          const { error: createError } = await supabase
-            .from('users')
-            .insert({
-              id: adminId,
-              email: credentials.email,
-              full_name: 'System Administrator',
-              role: 'admin',
-              subscription_status: 'premium',
-              trial_start_date: new Date().toISOString(),
-              trial_end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year
-              is_approved: true,
-              is_active: true
-            });
-
-          if (createError) {
-            console.error('Failed to create admin user:', createError);
-          }
-        }
-      }
-
+      // First try to sign in with Supabase auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password
       });
 
       if (error) {
-        // If auth fails but this is the demo admin, try to handle it gracefully
-        if (credentials.email === 'admin@dataanalyzer.com' && credentials.password === 'admin123') {
-          // For demo purposes, simulate successful login with admin user
-          const { data: adminUser, error: adminError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('email', credentials.email)
-            .single();
-
-          if (!adminError && adminUser) {
-            setAuthState({
-              user: adminUser,
-              isAuthenticated: true,
-              isLoading: false,
-              error: null
-            });
-            return;
-          }
-        }
         throw error;
       }
 
@@ -202,7 +152,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setAuthState(prev => ({
         ...prev,
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Login failed. Please check your credentials or register for a new account.'
+        error: error instanceof Error ? error.message : 'Login failed. Please check your credentials.'
       }));
       throw error;
     }
@@ -212,46 +162,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
 
+      // Validate password length
+      if (data.password.length < 6) {
+        throw new Error('Password must be at least 6 characters long');
+      }
+
       // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            full_name: data.full_name,
+            phone: data.phone,
+            company: data.company
+          }
         }
       });
 
       if (authError) throw authError;
 
-      if (authData.user) {
-        // Calculate trial period
-        const trialStartDate = new Date();
-        const trialEndDate = new Date();
-        trialEndDate.setDate(trialStartDate.getDate() + 3); // 3 days trial
-
-        // Create user profile
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert({
-            id: authData.user.id,
-            email: data.email,
-            full_name: data.full_name,
-            phone: data.phone,
-            company: data.company,
-            role: 'user',
-            subscription_status: 'trial',
-            trial_start_date: trialStartDate.toISOString(),
-            trial_end_date: trialEndDate.toISOString(),
-            is_approved: true, // Auto-approve for trial
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-
-        if (profileError) throw profileError;
-
-        // Send welcome email
-        await sendWelcomeEmail(data.email, data.full_name);
+      if (authData.user && !authData.session) {
+        // User created but needs email confirmation
+        setAuthState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: 'Please check your email and click the confirmation link to complete registration.'
+        }));
+      } else if (authData.session) {
+        // User created and logged in immediately
+        await fetchUserProfile(authData.user!.id);
       }
     } catch (error) {
       setAuthState(prev => ({
