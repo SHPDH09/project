@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, BarChart3, ArrowRight, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, ChartBar as BarChart3, ArrowRight, CircleAlert as AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface LoginPageProps {
