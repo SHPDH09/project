@@ -148,7 +148,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         if (adminData && adminData.length > 0 && adminData[0].is_authenticated) {
           // Get the admin user profile
-          const { data: userProfile, error: profileError } = await supabase
+          let { data: userProfile, error: profileError } = await supabase
             .from('users')
             .select('*')
             .eq('id', '1a74n307-7000-4000-8000-000000000000')
