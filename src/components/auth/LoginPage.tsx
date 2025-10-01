@@ -163,6 +163,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister, onSwitchToFor
             <p><strong>Admin Login:</strong></p>
             <p>Email: admin@dataanalyzer.com</p>
             <p>Password: Raunak@12583</p>
+            <p><strong>User ID:</strong> 1A74N3077</p>
             <p className="text-xs mt-2 text-yellow-600">
               Or register for a new account to get a 3-day free trial.
             </p>

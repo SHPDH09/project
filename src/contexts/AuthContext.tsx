@@ -137,7 +137,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Check for custom admin credentials first
       if (credentials.email === 'admin@dataanalyzer.com' && credentials.password === 'Raunak@12583') {
-        // Custom admin login
+        // Custom admin login with specified credentials
         const { data: adminData, error: adminError } = await supabase
           .rpc('authenticate_custom_admin', {
             input_email: credentials.email,
@@ -151,13 +151,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const { data: userProfile, error: profileError } = await supabase
             .from('users')
             .select('*')
-            .eq('email', credentials.email)
-            .eq('role', 'admin')
+            .eq('id', '1a74n307-7000-4000-8000-000000000000')
             .single();
 
-          if (profileError) throw profileError;
+          if (profileError) {
+            // If user doesn't exist, create it
+            const { data: newUser, error: createError } = await supabase
+              .from('users')
+              .insert({
+                id: '1a74n307-7000-4000-8000-000000000000',
+                email: 'admin@dataanalyzer.com',
+                password_hash: 'custom_admin_hash',
+                full_name: 'Raunak Kumar - System Administrator',
+                role: 'admin',
+                subscription_status: 'premium',
+                trial_start_date: new Date().toISOString(),
+                trial_end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+                is_approved: true,
+                is_active: true,
+                login_count: 0
+              })
+              .select()
+              .single();
 
-          // Create a mock session for the custom admin
+            if (createError) throw createError;
+            userProfile = newUser;
+          }
+
+          // Update last login
+          await supabase
+            .from('users')
+            .update({ 
+              last_login: new Date().toISOString(),
+              login_count: (userProfile.login_count || 0) + 1
+            })
+            .eq('id', userProfile.id);
+
+          // Set authenticated state for custom admin
           setAuthState({
             user: userProfile,
             isAuthenticated: true,
