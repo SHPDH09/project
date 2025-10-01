@@ -135,6 +135,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
 
+      // Check for custom admin credentials first
+      if (credentials.email === 'admin@dataanalyzer.com' && credentials.password === 'Raunak@12583') {
+        // Custom admin login
+        const { data: adminData, error: adminError } = await supabase
+          .rpc('authenticate_custom_admin', {
+            input_email: credentials.email,
+            input_password: credentials.password
+          });
+
+        if (adminError) throw adminError;
+
+        if (adminData && adminData.length > 0 && adminData[0].is_authenticated) {
+          // Get the admin user profile
+          const { data: userProfile, error: profileError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', credentials.email)
+            .eq('role', 'admin')
+            .single();
+
+          if (profileError) throw profileError;
+
+          // Create a mock session for the custom admin
+          setAuthState({
+            user: userProfile,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null
+          });
+          return;
+        }
+      }
+
       // First try to sign in with Supabase auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email: credentials.email,
