@@ -135,82 +135,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
 
-      // Check for custom admin credentials first
-      if (credentials.email === 'admin@dataanalyzer.com' && credentials.password === 'Raunak@12583') {
-        // Custom admin login with specified credentials
-        const { data: adminData, error: adminError } = await supabase
-          .rpc('authenticate_custom_admin', {
-            input_email: credentials.email,
-            input_password: credentials.password
-          });
+      const { data: authResult, error: authError } = await supabase
+        .rpc('authenticate_user', {
+          p_email: credentials.email,
+          p_password: credentials.password
+        });
 
-        if (adminError) throw adminError;
+      if (authError) throw authError;
 
-        if (adminData && adminData.length > 0 && adminData[0].is_authenticated) {
-          // Get the admin user profile
-          let { data: userProfile, error: profileError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', '1a74n307-7000-4000-8000-000000000000')
-            .single();
-
-          if (profileError) {
-            // If user doesn't exist, create it
-            const { data: newUser, error: createError } = await supabase
-              .from('users')
-              .insert({
-                id: '1a74n307-7000-4000-8000-000000000000',
-                email: 'admin@dataanalyzer.com',
-                password_hash: 'custom_admin_hash',
-                full_name: 'Raunak Kumar - System Administrator',
-                role: 'admin',
-                subscription_status: 'premium',
-                trial_start_date: new Date().toISOString(),
-                trial_end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-                is_approved: true,
-                is_active: true,
-                login_count: 0
-              })
-              .select()
-              .single();
-
-            if (createError) throw createError;
-            userProfile = newUser;
-          }
-
-          // Update last login
-          await supabase
-            .from('users')
-            .update({ 
-              last_login: new Date().toISOString(),
-              login_count: (userProfile.login_count || 0) + 1
-            })
-            .eq('id', userProfile.id);
-
-          // Set authenticated state for custom admin
-          setAuthState({
-            user: userProfile,
-            isAuthenticated: true,
-            isLoading: false,
-            error: null
-          });
-          return;
-        }
+      if (!authResult || authResult.length === 0 || !authResult[0].success) {
+        throw new Error(authResult?.[0]?.message || 'Invalid email or password');
       }
 
-      // First try to sign in with Supabase auth
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: credentials.email,
-        password: credentials.password
+      const userData = authResult[0];
+
+      const userProfile: User = {
+        id: userData.user_id,
+        email: userData.user_email,
+        full_name: userData.user_name,
+        phone: userData.user_phone,
+        address: userData.user_address,
+        company: userData.user_company,
+        role: userData.user_role,
+        subscription_status: userData.subscription_status,
+        is_approved: userData.is_approved,
+        is_active: userData.is_active,
+        trial_start_date: new Date().toISOString(),
+        trial_end_date: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      setAuthState({
+        user: userProfile,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null
       });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data.user) {
-        await fetchUserProfile(data.user.id);
-      }
     } catch (error) {
       setAuthState(prev => ({
         ...prev,
@@ -225,38 +186,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
 
-      // Validate password length
       if (data.password.length < 6) {
         throw new Error('Password must be at least 6 characters long');
       }
 
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: {
-            full_name: data.full_name,
-            phone: data.phone,
-            company: data.company
-          }
-        }
-      });
+      const { data: registerResult, error: registerError } = await supabase
+        .rpc('register_user', {
+          p_email: data.email,
+          p_password: data.password,
+          p_full_name: data.full_name,
+          p_phone: data.phone || null,
+          p_address: data.address || null,
+          p_company: data.company || null,
+          p_role: data.role || 'user'
+        });
 
-      if (authError) throw authError;
+      if (registerError) throw registerError;
 
-      if (authData.user && !authData.session) {
-        // User created but needs email confirmation
-        setAuthState(prev => ({
-          ...prev,
-          isLoading: false,
-          error: 'Please check your email and click the confirmation link to complete registration.'
-        }));
-      } else if (authData.session) {
-        // User created and logged in immediately
-        await fetchUserProfile(authData.user!.id);
+      if (!registerResult || registerResult.length === 0 || !registerResult[0].success) {
+        throw new Error(registerResult?.[0]?.message || 'Registration failed');
       }
+
+      setAuthState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: null
+      }));
+
+      alert('Registration successful! Please login with your credentials.');
     } catch (error) {
       setAuthState(prev => ({
         ...prev,

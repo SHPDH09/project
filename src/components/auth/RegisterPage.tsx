@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Mail, Lock, Phone, Building, Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
+import { User, Mail, Lock, Phone, Building, Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle, MapPin, Shield } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface RegisterPageProps {
@@ -14,7 +14,9 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
     confirmPassword: '',
     full_name: '',
     phone: '',
-    company: ''
+    company: '',
+    address: '',
+    role: 'user' as 'admin' | 'user'
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -66,7 +68,9 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
         password: formData.password,
         full_name: formData.full_name,
         phone: formData.phone || undefined,
-        company: formData.company || undefined
+        company: formData.company || undefined,
+        address: formData.address || undefined,
+        role: formData.role
       });
     } catch (error) {
       console.error('Registration failed:', error);
@@ -75,12 +79,12 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
-    
+
     // Clear validation error for this field
     if (validationErrors[e.target.name]) {
       setValidationErrors({
@@ -120,6 +124,28 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
         {/* Registration Form */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-gray-200/50">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Role Selection */}
+            <div>
+              <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
+                Account Type *
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Shield className="h-5 w-5 text-gray-400" />
+                </div>
+                <select
+                  id="role"
+                  name="role"
+                  value={formData.role}
+                  onChange={handleInputChange}
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 bg-white"
+                >
+                  <option value="user">User (3-day free trial)</option>
+                  <option value="admin">Admin (Immediate premium access)</option>
+                </select>
+              </div>
+            </div>
+
             {/* Full Name */}
             <div>
               <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-2">
@@ -212,6 +238,27 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
                   onChange={handleInputChange}
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                   placeholder="Enter your company name"
+                />
+              </div>
+            </div>
+
+            {/* Address (Optional) */}
+            <div>
+              <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
+                Address
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <MapPin className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="address"
+                  name="address"
+                  type="text"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                  placeholder="Enter your address"
                 />
               </div>
             </div>
@@ -334,7 +381,8 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
         {/* Terms */}
         <div className="mt-6 text-center text-xs text-gray-500">
           By creating an account, you agree to our Terms of Service and Privacy Policy.
-          Your 3-day free trial starts after email confirmation.
+          {formData.role === 'user' && ' Your 3-day free trial starts immediately after registration.'}
+          {formData.role === 'admin' && ' Admin accounts receive immediate premium access.'}
         </div>
       </div>
     </div>

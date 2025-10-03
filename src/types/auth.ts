@@ -10,10 +10,11 @@ export interface User {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  last_login: string | null;
+  last_login?: string | null;
   profile_image?: string;
   phone?: string;
   company?: string;
+  address?: string;
 }
 
 export interface AuthState {
@@ -34,6 +35,8 @@ export interface RegisterData {
   full_name: string;
   phone?: string;
   company?: string;
+  address?: string;
+  role?: 'admin' | 'user';
 }
 
 export interface ForgotPasswordData {
