@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Mail, Lock, Phone, Building, Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle, MapPin, Shield } from 'lucide-react';
+import { User, Mail, Lock, Phone, Building, Eye, EyeOff, ArrowRight, CircleAlert as AlertCircle, CircleCheck as CheckCircle, MapPin, Shield } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface RegisterPageProps {
